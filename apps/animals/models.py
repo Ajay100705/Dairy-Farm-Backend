@@ -172,3 +172,64 @@ class Animal(models.Model):
             self.save(update_fields=['lactation_number'])
             
             
+            
+class AnimalHealthRecord (models.Model):
+    """
+    Model for animal health records.
+    """
+    
+    RECORD_TYPE_CHOICES = [
+        ('checkup', _('Regular Checkup')),
+        ('vaccination', _('Vaccination')),
+        ('deworming', _('Deworming')),
+        ('treatment', _('Treatment')),
+        ('surgery', _('Surgery')),
+        ('pregnancy_check', _('Pregnancy Check')),
+        ('other', _('Other')),
+    ]
+    
+    # Basic Information
+    animal = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name='health_records', verbose_name=_('animal'))
+    record_type = models.CharField(_('record type'), max_length=20, choices=RECORD_TYPE_CHOICES)
+    date = models.DateField(_('date'))
+    
+    # health details
+    description = models.TextField(_('description'), blank=True, null=True)
+    symptoms = models.TextField(_('symptoms'), blank=True, null=True)
+    diagnosis = models.TextField(_('diagnosis'), blank=True, null=True)
+    treatment = models.TextField(_('treatment'), blank=True, null=True)
+    
+    # medication details
+    medications = models.TextField(_('medications'), blank=True, null=True)
+    dosage = models.CharField(_('dosage'), max_length=255, blank=True, null=True)
+    
+    # veterinarian details
+    veterinarian_name = models.CharField(_('veterinarian name'), max_length=255, blank=True, null=True)
+    veterinarian_contact = models.CharField(_('veterinarian contact'), max_length=255, blank=True, null=True)
+    
+    # cost details
+    cost = models.DecimalField(_('cost'), max_digits=12, decimal_places=2, default=0.00)
+    
+    # follow-up details
+    follow_up_date = models.DateField(_('follow-up date'), null=True, blank=True)
+    follow_up_notes = models.TextField(_('follow-up notes'), blank=True, null=True)
+    
+    # Document Details
+    documents = models.FileField(_('documents'), upload_to='health_records/', blank=True, null=True)
+    recorded_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, blank=True, null=True, related_name='recorded_health_records', verbose_name=_('recorded by'))
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+    
+    class Meta:
+        verbose_name = _('animal health record')
+        verbose_name_plural = _('animal health records')
+        ordering = ['-date', '-created_at']
+        indexes = [
+            models.Index(fields=['animal']),
+            models.Index(fields=['record_type']),
+            models.Index(fields=['date']),
+        ]
+        
+    def __str__(self):
+        return f"{self.animal.tag_number} - {self.get_record_type_display()} - {self.date}"
+    
+    
