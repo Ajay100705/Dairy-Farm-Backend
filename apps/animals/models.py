@@ -264,3 +264,46 @@ class AnimalWeightLog(models.Model):
         self.animal.current_weight = self.weight
         self.animal.save(update_fields=['current_weight'])
     
+class BreedingRecord(models.Model):
+    """
+    Model for breeding records.
+    """
+    METHOD_CHOICE = [
+        ('natural', _('Natural')),
+        ('ai', _('Artificial Insemination')),
+    ]
+    
+    STATUS_CHOICE = [
+        ('pending', _('Pending')),
+        ('confirmed', _('Confirmed Pregnant')),
+        ('failed', _('Failed')),
+        ('aborted', _('Aborted')),
+    ]
+    
+    female = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name='breeding_as_female', verbose_name=('female'), limit_choices_to={'gender': 'female'})
+    male = models.ForeignKey(Animal, on_delete=models.SET_NULL, null=True, blank=True, related_name='breeding_as_male', verbose_name=('male'), limit_choices_to={'gender': 'male'})
+    breeding_date = models.DateField(_('breeding date'), default=timezone.now)
+    method = models.CharField(_('method'), max_length=20, choices=METHOD_CHOICE, default='natural')
+    
+    # AI Details
+    semen_source = models.CharField(_('semen source'), max_length=255, blank=True, null=True)
+    semen_batch = models.CharField(_('semen batch number'), max_length=255, blank=True, null=True)
+    insemination_name = models.CharField(_('insemination technician'), max_length=255, blank=True, null=True)
+    
+    # status
+    status = models.CharField(_('status'), max_length=20, choices=STATUS_CHOICE, default='pending')
+    
+    # Pregnancy Check Details
+    pregnancy_check_date = models.DateField(_('pregnancy check date'), null=True, blank=True)
+    expected_calving_date = models.DateField(_('expected calving date'), null=True, blank=True)
+    
+    # Calving Details
+    actual_calving_date = models.DateField(_('actual calving date'), null=True, blank=True)
+    calving_notes = models.TextField(_('calving notes'), blank=True, null=True)
+    
+    # Farm and Recording Details
+    farm = models.ForeignKey('farms.Farm', on_delete=models.CASCADE, related_name='breeding_records', verbose_name=_('farm'))
+    recorded_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, blank=True, null=True, related_name='recorded_breeding', verbose_name=_('recorded by'))
+    
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('updated at'), auto_now=True)
