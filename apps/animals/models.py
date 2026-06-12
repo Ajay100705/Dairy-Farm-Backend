@@ -307,3 +307,69 @@ class BreedingRecord(models.Model):
     
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
     updated_at = models.DateTimeField(_('updated at'), auto_now=True)
+    
+class CalvingRecord(models.Model):
+    """
+    Model for calving record
+    """
+    
+    CALVING_TYPE_CHOICES = [
+        ('normal', _('Normal')),
+        ('assisted', _('Assisted')),
+        ('c_section', _('C-Section')),
+        ('difficult', _('Difficult')),
+    ]
+    
+    GENDER_CHOICES = [
+        ('male', _('Male')),
+        ('female', _('Female')),
+    ]
+    
+    mother = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name='calvings', verbose_name=_('mother'), limit_choices_to={'gender': 'female'})
+    breeding = models.ForeignKey(BreedingRecord, on_delete=models.SET_NULL, null=True, blank=True, related_name='calving', verbose_name=_('breeding record'))
+    calving_date = models.DateField(_('calving date'))
+    calving_type = models.CharField(_('calving type'), max_length=20, choices=CALVING_TYPE_CHOICES, default='normal')
+    
+    # Calf Details
+    calf_tag_number = models.CharField(_('calf tag number'), max_length=50, blank=True)
+    calf_gender = models.CharField(_('calf gender'), max_length=10, choices=GENDER_CHOICES)
+    calf_weight = models.DecimalField(_('calf weight (kg)'), max_digits=6, decimal_places=2, null=True, blank=True)
+    calf_health_status = models.CharField(_('calf health status'), max_length=200, blank=True)
+    
+    # Complications
+    complications = models.TextField(_('complications'), blank=True)
+    treatment_given = models.TextField(_('treatment given'), blank=True)
+    
+    # Assistance
+    assisted_by = models.CharField(_('assisted by'), max_length=150, blank=True)
+    
+    farm = models.ForeignKey('farms.Farm', on_delete=models.CASCADE, related_name='calving_records', verbose_name=_('farm'))
+    
+    recorded_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, related_name='recorded_calvings', verbose_name=_('recorded by'))
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+    
+    class Meta:
+        verbose_name = _('calving record')
+        verbose_name_plural = _('calving records')
+        ordering = ['-calving_date']
+    
+    def __str__(self):
+        return f"{self.mother.tag_number} - Calving on {self.calving_date}"
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        
+        # Update mother's details
+        self.mother.last_calving_date = self.calving_date
+        self.mother.is_pregnant = False
+        self.mother.expected_calving_date = None
+        self.mother.update_lactation_number()
+        self.mother.save(update_fields=[
+            'last_calving_date', 'is_pregnant',
+            'expected_calving_date', 'lactation_number'
+        ])
+        
+        # Update breeding record if exists
+        if self.breeding:
+            self.breeding.actual_calving_date = self.calving_date
+            self.breeding.save(update_fields=['actual_calving_date'])
