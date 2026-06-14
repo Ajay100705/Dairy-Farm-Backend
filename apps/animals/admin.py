@@ -118,3 +118,15 @@ class CalvingRecordAdmin(admin.ModelAdmin):
     search_fields = ['mother__tag_number', 'calf_tag_number']
     list_select_related = ['mother', 'farm']
     date_hierarchy = 'calving_date'
+    
+    
+    @admin.register(AnimalNote)
+class AnimalNoteAdmin(admin.ModelAdmin):
+    """
+    Admin configuration for AnimalNote model.
+    """
+    
+    list_display = ['animal', 'title', 'is_important', 'created_by', 'created_at']
+    list_filter = ['is_important', 'created_at']
+    search_fields = ['animal__tag_number', 'title', 'content']
+    list_select_related = ['animal', 'created_by']
