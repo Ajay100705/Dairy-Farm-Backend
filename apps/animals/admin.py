@@ -77,3 +77,14 @@ class AnimalHealthRecordAdmin(admin.ModelAdmin):
     list_filter = [ 'record_type','date']
     search_fields = ['animal__tag_number', 'description']
     date_hierarchy = 'date'
+    
+@admin.register(AnimalWeightLog)
+class AnimalWeightLogAdmin(admin.ModelAdmin):
+    """Admin configuration for AnimalWeightLog model.
+    """
+    
+    list_display = ['animal', 'date', 'weight', 'recorded_by']
+    list_filter = ['date']
+    search_fields = ['animal__tag_number']
+    list_select_related = ['animal', 'recorded_by']
+    date_hierarchy = 'date'
