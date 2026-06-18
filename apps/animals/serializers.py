@@ -213,3 +213,20 @@ class AnimalNoteSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user
         return super().create(validated_data)
+    
+    
+class AnimalStatsSerializer(serializers.Serializer):
+    """
+    Serializer for animal statistics.
+    """
+    total_animals = serializers.IntegerField()
+    by_species = serializers.DictField(child=serializers.IntegerField())
+    by_breed = serializers.DictField(child=serializers.IntegerField())
+    by_status = serializers.DictField(child=serializers.IntegerField())
+    by_gender = serializers.DictField(child=serializers.IntegerField())
+    pregnant_count = serializers.IntegerField()
+    lactating_count = serializers.IntegerField()
+    adult_count = serializers.IntegerField()
+    calf_count = serializers.IntegerField()
+    recent_additions = serializers.IntegerField()
+    recent_sales = serializers.IntegerField()
