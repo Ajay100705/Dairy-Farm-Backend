@@ -93,4 +93,25 @@ class AnimalUpdateSerializer(serializers.ModelSerializer):
         ]
         
     
+class AnimalHealthRecordSerializer(serializers.ModelSerializer):
+    """
+    Serializer for animal health records.
+    """
+    record_type_display = serializers.CharField(source='get_record_type_display', read_only=True)
+    animal_tag = serializers.CharField(source='animal.tag_number', read_only=True)
+    recorded_by_name = serializers.CharField(source='recorded_by.full_name', read_only=True)
     
+    class Meta:
+        model = AnimalHealthRecord
+        fields = [
+            'id', 'animal', 'animal_tag', 'record_type', 'record_type_display',
+            'date', 'description', 'symptoms', 'diagnosis', 'treatment',
+            'medications', 'dosage', 'veterinarian_name', 'veterinarian_contact',
+            'cost', 'follow_up_date', 'follow_up_notes', 'documents',
+            'recorded_by', 'recorded_by_name', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'recorded_by']
+    
+    def create(self, validated_data):
+        validated_data['recorded_by'] = self.context['request'].user
+        return super().create(validated_data)
