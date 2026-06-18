@@ -164,3 +164,52 @@ class BreedingRecordSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data['recorded_by'] = self.context['request'].user
         return super().create(validated_data)
+    
+    
+class CalvingRecordSerializer(serializers.ModelSerializer):
+    """
+    Serializer for calving records.
+    """
+    calving_type_display = serializers.CharField(source='get_calving_type_display', read_only=True)
+    calf_gender_display = serializers.CharField(source='get_calf_gender_display', read_only=True)
+    mother_tag = serializers.CharField(source='mother.tag_number', read_only=True)
+    recorded_by_name = serializers.CharField(source='recorded_by.full_name', read_only=True)
+    farm_name = serializers.CharField(source='farm.name', read_only=True)
+    
+    class Meta:
+        model = CalvingRecord
+        fields = [
+            'id', 'mother', 'mother_tag', 'breeding',
+            'calving_date', 'calving_type', 'calving_type_display',
+            'calf_tag_number', 'calf_gender', 'calf_gender_display',
+            'calf_weight', 'calf_health_status',
+            'complications', 'treatment_given', 'assisted_by',
+            'farm', 'farm_name', 'recorded_by', 'recorded_by_name',
+            'created_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'recorded_by']
+    
+    def create(self, validated_data):
+        validated_data['recorded_by'] = self.context['request'].user
+        return super().create(validated_data)
+
+
+class AnimalNoteSerializer(serializers.ModelSerializer):
+    """
+    Serializer for animal notes.
+    """
+    animal_tag = serializers.CharField(source='animal.tag_number', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.full_name', read_only=True)
+    
+    class Meta:
+        model = AnimalNote
+        fields = [
+            'id', 'animal', 'animal_tag', 'title', 'content',
+            'is_important', 'created_by', 'created_by_name',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'created_by']
+    
+    def create(self, validated_data):
+        validated_data['created_by'] = self.context['request'].user
+        return super().create(validated_data)
