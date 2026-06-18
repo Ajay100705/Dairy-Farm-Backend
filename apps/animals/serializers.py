@@ -115,3 +115,52 @@ class AnimalHealthRecordSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data['recorded_by'] = self.context['request'].user
         return super().create(validated_data)
+    
+    
+class AnimalWeightLogSerializer(serializers.ModelSerializer):
+    """
+    Serializer for animal weight logs.
+    """
+    animal_tag = serializers.CharField(source='animal.tag_number', read_only=True)
+    recorded_by_name = serializers.CharField(source='recorded_by.full_name', read_only=True)
+    
+    class Meta:
+        model = AnimalWeightLog
+        fields = [
+            'id', 'animal', 'animal_tag', 'date', 'weight',
+            'notes', 'recorded_by', 'recorded_by_name', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'recorded_by']
+    
+    def create(self, validated_data):
+        validated_data['recorded_by'] = self.context['request'].user
+        return super().create(validated_data)
+    
+    
+class BreedingRecordSerializer(serializers.ModelSerializer):
+    """
+    Serializer for breeding records.
+    """
+    method_display = serializers.CharField(source='get_method_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    female_tag = serializers.CharField(source='female.tag_number', read_only=True)
+    male_tag = serializers.CharField(source='male.tag_number', read_only=True)
+    recorded_by_name = serializers.CharField(source='recorded_by.full_name', read_only=True)
+    farm_name = serializers.CharField(source='farm.name', read_only=True)
+    
+    class Meta:
+        model = BreedingRecord
+        fields = [
+            'id', 'female', 'female_tag', 'male', 'male_tag',
+            'breeding_date', 'method', 'method_display',
+            'semen_source', 'semen_batch', 'inseminator_name',
+            'status', 'status_display', 'pregnancy_check_date',
+            'expected_calving_date', 'actual_calving_date',
+            'calving_notes', 'farm', 'farm_name',
+            'recorded_by', 'recorded_by_name', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'recorded_by']
+    
+    def create(self, validated_data):
+        validated_data['recorded_by'] = self.context['request'].user
+        return super().create(validated_data)
