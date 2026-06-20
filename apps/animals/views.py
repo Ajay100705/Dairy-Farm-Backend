@@ -29,6 +29,8 @@ from apps.accounts.permissions import (
     IsFarmMember, CanManageAnimals, IsOwner
 )
 
+from apps.farms.models import Farm
+
 
 
 class AnimalListView(generics.ListCreateAPIView):
@@ -181,5 +183,44 @@ class AnimalWeightLogDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = AnimalWeightLogSerializer
     permission_classes = [permissions.IsAuthenticated, IsFarmMember]
     queryset = AnimalWeightLog.objects.all()
+    
+    
+class BreedingRecordListView(generics.ListCreateAPIView):
+    """
+    API endpoint for listing and creating breeding records.
+    """
+    serializer_class = BreedingRecordSerializer
+    permission_classes = [permissions.IsAuthenticated, IsFarmMember]
+    
+    def get_queryset(self):
+        farm_id = self.kwargs.get('farm_pk')
+        queryset = BreedingRecord.objects.filter(farm_id=farm_id)
+        
+        # Filter by status
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            queryset = queryset.filter(status=status_param)
+        
+        # Filter by female
+        female_id = self.request.query_params.get('female')
+        if female_id:
+            queryset = queryset.filter(female_id=female_id)
+        
+        return queryset.order_by('-breeding_date')
+        
+    
+    def perform_create(self, serializer):
+        farm = get_object_or_404(Farm, pk=self.kwargs['farm_pk'])
+        self.check_object_permissions(self.request, farm)
+        serializer.save(farm=farm)
+        
+        
+class BreedingRecordDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    API endpoint for retrieving, updating and deleting breeding records.
+    """
+    serializer_class = BreedingRecordSerializer
+    permission_classes = [permissions.IsAuthenticated, IsFarmMember]
+    queryset = BreedingRecord.objects.all()
     
     
