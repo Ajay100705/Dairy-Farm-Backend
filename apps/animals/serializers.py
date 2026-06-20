@@ -5,7 +5,7 @@ from .models import (
 )
 
 
-class AnimalSerializer(serializers.ModelSerializer):
+class AnimalListSerializer(serializers.ModelSerializer):
     """Serializer for listing  animals (minimal fields).
     """
     species_display = serializers.CharField(source='get_species_display', read_only=True)
