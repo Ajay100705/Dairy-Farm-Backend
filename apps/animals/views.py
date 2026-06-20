@@ -90,3 +90,45 @@ class AnimalListView(generics.ListCreateAPIView):
             )
         
         return queryset.select_related('farm', 'mother', 'father').order_by('-created_at')
+
+
+class AnimalDetailView(generics.RetrieveAPIView):
+    """
+    Retrieve animal details.
+    """
+    serializer_class = AnimalDetailSerializer
+    permission_classes = [permissions.IsAuthenticated, IsFarmMember]
+    queryset = Animal.objects.all()
+    
+
+class AnimalCreateView(generics.CreateAPIView):
+    """
+    Create a new animal.
+    """
+    serializer_class = AnimalCreateSerializer
+    permission_classes = [permissions.IsAuthenticated, CanManageAnimals]
+    
+
+class AnimalUpdateView(generics.UpdateAPIView):
+    """
+    Update an existing animal.
+    """
+    serializer_class = AnimalUpdateSerializer
+    permission_classes = [permissions.IsAuthenticated, CanManageAnimals]
+    queryset = Animal.objects.all()
+    
+    
+class AnimalDeleteView(generics.DestroyAPIView):
+    """
+    Delete an animal.
+    """
+    permission_classes = [permissions.IsAuthenticated, CanManageAnimals]
+    queryset = Animal.objects.all()
+    
+    def perform_destroy(self, instance):
+        instance.is_active = False
+        instance.status = 'inactive'
+        instance.save()
+        
+        
+
