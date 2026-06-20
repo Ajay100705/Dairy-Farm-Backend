@@ -224,3 +224,36 @@ class BreedingRecordDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = BreedingRecord.objects.all()
     
     
+class CalvingRecordListView(generics.ListCreateAPIView):
+    """
+    API endpoint for listing and creating calving records.
+    """
+    serializer_class = CalvingRecordSerializer
+    permission_classes = [permissions.IsAuthenticated, IsFarmMember]
+    
+    def get_queryset(self):
+        farm_id = self.kwargs.get('farm_pk')
+        queryset = CalvingRecord.objects.filter(farm_id=farm_id)
+        
+        # Filter by mother
+        mother_id = self.request.query_params.get('mother')
+        if mother_id:
+            queryset = queryset.filter(mother_id=mother_id)
+        
+        return queryset.order_by('-calving_date')
+    
+    def perform_create(self, serializer):
+        farm = get_object_or_404(Farm, pk=self.kwargs['farm_pk'])
+        self.check_object_permissions(self.request, farm)
+        serializer.save(farm=farm)
+
+
+class CalvingRecordDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    API endpoint for retrieving, updating and deleting calving records.
+    """
+    serializer_class = CalvingRecordSerializer
+    permission_classes = [permissions.IsAuthenticated, IsFarmMember]
+    queryset = CalvingRecord.objects.all()
+    
+    
