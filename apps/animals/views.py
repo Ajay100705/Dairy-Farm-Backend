@@ -290,3 +290,202 @@ class AnimalNoteDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = AnimalNote.objects.all()
     
     
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def animal_stats(request):
+    """
+    API endpoint for getting animal statistics.
+    """
+    user = request.user
+    
+    # Get farms user has access to
+    if user.is_owner:
+        farm_ids = user.owned_farms.filter(is_active=True).values_list('id', flat=True)
+    else:
+        farm_ids = user.farm_memberships.filter(
+            is_active=True, status='active'
+        ).values_list('farm_id', flat=True)
+    
+    animals = Animal.objects.filter(farm_id__in=farm_ids)
+    
+    # Filter by farm if specified
+    farm_id = request.query_params.get('farm')
+    if farm_id:
+        animals = animals.filter(farm_id=farm_id)
+    
+    total_animals = animals.count()
+    
+    by_species = dict(
+        animals.values('species').annotate(
+            count=Count('id')
+        ).values_list('species', 'count')
+    )
+    
+    by_breed = dict(
+        animals.values('breed').annotate(
+            count=Count('id')
+        ).values_list('breed', 'count')
+    )
+    
+    by_status = dict(
+        animals.values('status').annotate(
+            count=Count('id')
+        ).values_list('status', 'count')
+    )
+    
+    by_gender = dict(
+        animals.values('gender').annotate(
+            count=Count('id')
+        ).values_list('gender', 'count')
+    )
+    
+    pregnant_count = animals.filter(is_pregnant=True).count()
+    lactating_count = animals.filter(status='lactating').count()
+    adult_count = animals.filter(date_of_birth__lte=timezone.now().date() - timedelta(days=730)).count()
+    calf_count = animals.filter(date_of_birth__gt=timezone.now().date() - timedelta(days=180)).count()
+    
+    # Recent additions (last 30 days)
+    recent_additions = animals.filter(
+        created_at__gte=timezone.now() - timedelta(days=30)
+    ).count()
+    
+    # Recent sales (last 30 days)
+    recent_sales = animals.filter(
+        is_sold=True,
+        sale_date__gte=timezone.now() - timedelta(days=30)
+    ).count()
+    
+    data = {
+        'total_animals': total_animals,
+        'by_species': by_species,
+        'by_breed': by_breed,
+        'by_status': by_status,
+        'by_gender': by_gender,
+        'pregnant_count': pregnant_count,
+        'lactating_count': lactating_count,
+        'adult_count': adult_count,
+        'calf_count': calf_count,
+        'recent_additions': recent_additions,
+        'recent_sales': recent_sales,
+    }
+    
+    serializer = AnimalStatsSerializer(data)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated, IsFarmMember])
+def animal_pedigree(request, pk):
+    """
+    API endpoint for getting animal pedigree.
+    """
+    animal = get_object_or_404(Animal, pk=pk)
+    serializer = AnimalPedigreeSerializer(animal)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated, IsFarmMember])
+def animal_weight_history(request, pk):
+    """
+    API endpoint for getting animal weight history.
+    """
+    animal = get_object_or_404(Animal, pk=pk)
+    weight_logs = AnimalWeightLog.objects.filter(animal=animal).order_by('date')
+    
+    data = [
+        {
+            'date': log.date,
+            'weight': log.weight,
+            'notes': log.notes
+        }
+        for log in weight_logs
+    ]
+    
+    return Response({
+        'animal_tag': animal.tag_number,
+        'animal_name': animal.name,
+        'weight_history': data
+    })
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated, IsOwner])
+def mark_animal_sold(request, pk):
+    """
+    API endpoint for marking an animal as sold.
+    """
+    animal = get_object_or_404(Animal, pk=pk)
+    
+    animal.is_sold = True
+    animal.sale_date = request.data.get('sale_date')
+    animal.sale_price = request.data.get('sale_price')
+    animal.sale_to = request.data.get('sale_to')
+    animal.status = 'sold'
+    animal.is_active = False
+    animal.save()
+    
+    # Update farm animal count
+    animal.farm.update_animal_count()
+    
+    return Response({'message': 'Animal marked as sold.'})
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated, IsOwner])
+def mark_animal_deceased(request, pk):
+    """
+    API endpoint for marking an animal as deceased.
+    """
+    animal = get_object_or_404(Animal, pk=pk)
+    
+    animal.status = 'deceased'
+    animal.is_active = False
+    animal.save()
+    
+    # Update farm animal count
+    animal.farm.update_animal_count()
+    
+    return Response({'message': 'Animal marked as deceased.'})
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_breed_choices(request):
+    """
+    API endpoint for getting breed choices.
+    """
+    species = request.query_params.get('species')
+    
+    cow_breeds = [
+        {'value': 'holstein', 'label': 'Holstein Friesian'},
+        {'value': 'jersey', 'label': 'Jersey'},
+        {'value': 'gir', 'label': 'Gir'},
+        {'value': 'sahiwal', 'label': 'Sahiwal'},
+        {'value': 'red_sindhi', 'label': 'Red Sindhi'},
+        {'value': 'tharparkar', 'label': 'Tharparkar'},
+        {'value': 'kankrej', 'label': 'Kankrej'},
+        {'value': 'ongole', 'label': 'Ongole'},
+        {'value': 'rathi', 'label': 'Rathi'},
+        {'value': 'hariana', 'label': 'Hariana'},
+        {'value': 'crossbred', 'label': 'Crossbred'},
+    ]
+    
+    buffalo_breeds = [
+        {'value': 'murrah', 'label': 'Murrah'},
+        {'value': 'surti', 'label': 'Surti'},
+        {'value': 'jaffarabadi', 'label': 'Jaffarabadi'},
+        {'value': 'bhadawari', 'label': 'Bhadawari'},
+        {'value': 'nili_ravi', 'label': 'Nili-Ravi'},
+        {'value': 'mehsana', 'label': 'Mehsana'},
+    ]
+    
+    if species == 'cow':
+        return Response(cow_breeds)
+    elif species == 'buffalo':
+        return Response(buffalo_breeds)
+    else:
+        return Response({
+            'cow': cow_breeds,
+            'buffalo': buffalo_breeds
+        })
