@@ -114,5 +114,48 @@ class MilkProductionSummary(models.Model):
         return f"{self.farm.name} - {self.date} - {self.total_quantity}L"
 
 
+class AnimalProductionSummary(models.Model):
+    """
+    Model for summarizing milk production for individual animals over a period.
+    """
+    animal = models.ForeignKey('animals.Animal', on_delete=models.CASCADE, related_name='production_summaries', verbose_name=_('animal'))
+    farm = models.ForeignKey('farms.Farm', on_delete=models.CASCADE, related_name='animal_production_summaries', verbose_name=_('farm'))
+    
+    # Period fields
+    period_start = models.DateField(_('period start'))
+    period_end = models.DateField(_('period end'))
+    period_type = models.CharField(_('period type'), max_length=20, choices=[('daily', _('Daily')), ('weekly', _('Weekly')), ('monthly', _('Monthly'))], default='daily')
+    
+    # Production metrics
+    total_quantity = models.DecimalField(_('total quantity (liters)'), max_digits=15, decimal_places=2, validators=[MinValueValidator(0)], default=0)
+    total_sessions = models.PositiveIntegerField(_('total sessions'), default=0)
+    average_per_session = models.DecimalField(_('average per session'), max_digits=10, decimal_places=2, default=0)
+    average_per_day = models.DecimalField(_('average per day'), max_digits=10, decimal_places=2, default=0)
+    
+    # Peak production metrics
+    peak_quantity = models.DecimalField(_('peak quantity (liters)'), max_digits=10, decimal_places=2, validators=[MinValueValidator(0)], default=0)
+    peak_date = models.DateField(_('peak date'), null=True, blank=True)
+    
+    # Average quality metrics
+    average_fat = models.DecimalField(_('average fat percentage'), max_digits=5, decimal_places=2, validators=[MinValueValidator(0)], null=True, blank=True)
+    average_snf = models.DecimalField(_('average SNF percentage'), max_digits=5, decimal_places=2, validators=[MinValueValidator(0)], null=True, blank=True)
+    
+    # Financial summary fields
+    total_value = models.DecimalField(_('total value'), max_digits=20, decimal_places=2, validators=[MinValueValidator(0)], default=0)
+    
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('updated at'), auto_now=True)
+    
+    class Meta:
+        verbose_name = _('animal production summary')
+        verbose_name_plural = _('animal production summaries')
+        unique_together = ('animal', 'period_start', 'period_end')
+        ordering = ['-period_end']
+        indexes = [
+            models.Index(fields=['animal', 'period_start', 'period_end']),
+        ]
+        
+    def __str__(self):
+        return f"{self.animal.tag_number} - {self.period_start} to {self.period_end}"
 
 
