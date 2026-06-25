@@ -63,3 +63,45 @@ class MilkProductionLogCreateSerializer(serializers.ModelSerializer):
         return data
     
     
+class DailyProductionSummarySerializer(serializers.ModelSerializer):
+    """
+    Serializer for daily production summaries.
+    """
+    farm_name = serializers.CharField(source='farm.name', read_only=True)
+    
+    class Meta:
+        model = DailyProductionSummary
+        fields = [
+            'id', 'farm', 'farm_name', 'date',
+            'total_quantity', 'total_animals_milked',
+            'average_quantity_per_animal',
+            'morning_quantity', 'afternoon_quantity', 'evening_quantity',
+            'average_fat', 'average_snf',
+            'total_value', 'average_price_per_liter',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+        
+        
+class AnimalProductionSummarySerializer(serializers.ModelSerializer):
+    """
+    Serializer for animal production summaries.
+    """
+    animal_tag = serializers.CharField(source='animal.tag_number', read_only=True)
+    animal_name = serializers.CharField(source='animal.name', read_only=True)
+    farm_name = serializers.CharField(source='farm.name', read_only=True)
+    
+    class Meta:
+        model = AnimalProductionSummary
+        fields = [
+            'id', 'animal', 'animal_tag', 'animal_name',
+            'farm', 'farm_name', 'period_start', 'period_end',
+            'period_type', 'total_quantity', 'total_sessions',
+            'average_per_session', 'average_per_day',
+            'peak_quantity', 'peak_date',
+            'average_fat', 'average_snf', 'total_value',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+        
+        
