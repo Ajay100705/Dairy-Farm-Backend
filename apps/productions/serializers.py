@@ -150,3 +150,54 @@ class MilkSaleUpdateSerializer(serializers.ModelSerializer):
         ]
 
 
+class ProductionStatsSerializer(serializers.Serializer):
+    """
+    Serializer for production statistics.
+    """
+    total_production_today = serializers.DecimalField(max_digits=10, decimal_places=2)
+    total_production_this_week = serializers.DecimalField(max_digits=10, decimal_places=2)
+    total_production_this_month = serializers.DecimalField(max_digits=10, decimal_places=2)
+    average_daily_production = serializers.DecimalField(max_digits=10, decimal_places=2)
+    total_animals_in_production = serializers.IntegerField()
+    average_per_animal = serializers.DecimalField(max_digits=6, decimal_places=2)
+    top_producers = serializers.ListField(child=serializers.DictField())
+    production_trend = serializers.ListField(child=serializers.DictField())
+
+
+class MilkSaleStatsSerializer(serializers.Serializer):
+    """
+    Serializer for milk sale statistics.
+    """
+    total_sales_today = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_sales_this_week = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_sales_this_month = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_quantity_sold_this_month = serializers.DecimalField(max_digits=10, decimal_places=2)
+    average_price_per_liter = serializers.DecimalField(max_digits=8, decimal_places=2)
+    pending_payments = serializers.DecimalField(max_digits=12, decimal_places=2)
+    top_buyers = serializers.ListField(child=serializers.DictField())
+
+
+class BulkProductionCreateSerializer(serializers.Serializer):
+    """
+    Serializer for bulk creation of production logs.
+    """
+    farm = serializers.PrimaryKeyRelatedField(queryset=Farm.objects.all())
+    date = serializers.DateField()
+    session = serializers.ChoiceField(choices=MilkProductionLog.SESSION_CHOICES)
+    records = serializers.ListField(
+        child=serializers.DictField(
+            child=serializers.DecimalField(max_digits=6, decimal_places=2)
+        )
+    )
+    
+    def validate(self, data):
+        # Validate that all animals belong to the farm
+        animal_ids = [r.get('animal_id') for r in data['records']]
+        animals = Animal.objects.filter(id__in=animal_ids, farm=data['farm'])
+        
+        if len(animals) != len(animal_ids):
+            raise serializers.ValidationError(
+                'Some animals do not belong to the selected farm.'
+            )
+        
+        return data
