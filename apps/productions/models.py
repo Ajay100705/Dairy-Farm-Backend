@@ -159,3 +159,76 @@ class AnimalProductionSummary(models.Model):
         return f"{self.animal.tag_number} - {self.period_start} to {self.period_end}"
 
 
+class MilkSale(models.Model):
+    """
+    Model for recording milk sales.
+    """
+    SALE_TYPE_CHOICES = [
+        ('direct', _('Direct Sale')),
+        ('dairy', _('Dairy/Cooperative')),
+        ('wholesale', _('Wholesale')),
+        ('retail', _('Retail')),
+    ]
+    
+    PAYMENT_STATUS_CHOICES = [
+        ('pending', _('Pending')),
+        ('partial', _('Partial')),
+        ('paid', _('Paid')),
+    ]
+    
+    farm = models.ForeignKey('farms.Farm', on_delete=models.CASCADE, related_name='milk_sales', verbose_name=_('farm'))
+    
+    # Sale details
+    date = models.DateField(_('date'))
+    sale_type = models.CharField(_('sale type'), max_length=20, choices=SALE_TYPE_CHOICES, default='direct')
+    
+    # Buyer details
+    buyer_name = models.CharField(_('buyer name'), max_length=255)
+    buyer_contact = models.CharField(_('buyer contact'), max_length=255, blank=True, null=True)
+    buyer_address = models.TextField(_('buyer address'), blank=True, null=True)
+    
+    # Sale metrics
+    quantity = models.DecimalField(_('quantity (liters)'), max_digits=15, decimal_places=2, validators=[MinValueValidator(0)])
+    price_per_liter = models.DecimalField(_('price per liter'), max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    total_value = models.DecimalField(_('total value'), max_digits=20, decimal_places=2, validators=[MinValueValidator(0)], blank=True)
+    
+    # Quality metrics
+    fat_percentage = models.DecimalField(_('fat percentage'), max_digits=5, decimal_places=2, validators=[MinValueValidator(0)], null=True, blank=True)
+    snf_percentage = models.DecimalField(_('SNF percentage'), max_digits=5, decimal_places=2, validators=[MinValueValidator(0)], null=True, blank=True)
+    
+    # Payment details
+    payment_status = models.CharField(_('payment status'), max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
+    amount_paid = models.DecimalField(_('amount paid'), max_digits=20, decimal_places=2, validators=[MinValueValidator(0)], default=0)
+    payment_date = models.DateField(_('payment date'), null=True, blank=True)
+    payment_method = models.CharField(_('payment method'), max_length=50, blank=True, null=True)
+    
+    # Additional notes
+    notes = models.TextField(_('notes'), blank=True, null=True)
+    
+    # Recorded by and timestamps
+    recorded_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='recorded_milk_sales', verbose_name=_('recorded by'))
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('updated at'), auto_now=True)
+    
+    class Meta:
+        verbose_name = _('milk sale')
+        verbose_name_plural = _('milk sales')
+        ordering = ['-date', '-created_at']
+        indexes = [
+            models.Index(fields=['farm', 'date']),
+            models.Index(fields=['payment_status']),
+        ]
+        
+    def __str__(self):
+        return f"{self.buyer_name} - {self.date} - {self.quantity}L"
+    
+    def save(self, *args, **kwargs):
+        # Calculate total value if not set
+        if self.price_per_liter is not None and self.quantity is not None:
+            self.total_value = self.price_per_liter * self.quantity
+        
+        super().save(*args, **kwargs)
+    
+    @property
+    def balance_due(self):
+        return self.total_value - self.amount_paid
